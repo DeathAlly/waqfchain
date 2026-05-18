@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WaqfChain — Tokenized Endowment Assets on Arc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Tajawal:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #E8C97A;
+      --gold-dim: #8B6E2E;
+      --navy: #0A0F1E;
+      --navy-mid: #111827;
+      --navy-light: #1A2540;
+      --navy-card: #141C2E;
+      --teal: #0EA5A0;
+      --teal-dim: #0A7570;
+      --white: #F5F0E8;
+      --white-dim: #B8B0A0;
+      --red: #C0392B;
+      --green: #27AE60;
+      --border: rgba(201,168,76,0.15);
+      --border-bright: rgba(201,168,76,0.4);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--navy);
+      color: var(--white);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── ISLAMIC GEOMETRIC BACKGROUND ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(
+          60deg,
+          transparent,
+          transparent 40px,
+          rgba(201,168,76,0.03) 40px,
+          rgba(201,168,76,0.03) 41px
+        ),
+        repeating-linear-gradient(
+          -60deg,
+          transparent,
+          transparent 40px,
+          rgba(201,168,76,0.03) 40px,
+          rgba(201,168,76,0.03) 41px
+        ),
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 40px,
+          rgba(201,168,76,0.02) 40px,
+          rgba(201,168,76,0.02) 41px
+        );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: -40%;
+      right: -20%;
+      width: 80vw;
+      height: 80vw;
+      background: radial-gradient(ellipse at center, rgba(14,165,160,0.06) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── NAVBAR ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+      background: rgba(10,15,30,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-mark {
+      width: 32px;
+      height: 32px;
+      position: relative;
+    }
+
+    .logo-mark svg { width: 100%; height: 100%; }
+
+    .logo-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--gold);
+    }
+
+    .logo-text span {
+      color: var(--white);
+      font-weight: 300;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--white-dim);
+      text-decoration: none;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-links a:hover, .nav-links a.active { color: var(--gold); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .network-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--teal);
+    }
+
+    .network-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--teal);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .btn-connect {
+      padding: 8px 20px;
+      background: transparent;
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-connect:hover {
+      background: rgba(201,168,76,0.1);
+      border-color: var(--gold);
+    }
+
+    .btn-connect.connected {
+      color: var(--teal);
+      border-color: var(--teal-dim);
+    }
+
+    /* ─── LAYOUT ─── */
+    .app {
+      position: relative;
+      z-index: 1;
+      padding-top: 64px;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: 220px;
+      min-height: calc(100vh - 64px);
+      border-right: 1px solid var(--border);
+      padding: 2rem 0;
+      position: sticky;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2rem;
+    }
+
+    .sidebar-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--white-dim);
+      padding: 0 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 1.5rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+      color: var(--white-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      border-left: 2px solid transparent;
+    }
+
+    .sidebar-item:hover {
+      color: var(--white);
+      background: rgba(201,168,76,0.05);
+    }
+
+    .sidebar-item.active {
+      color: var(--gold);
+      border-left-color: var(--gold);
+      background: rgba(201,168,76,0.08);
+    }
+
+    .sidebar-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ─── MAIN CONTENT ─── */
+    main {
+      flex: 1;
+      padding: 2.5rem;
+      overflow-x: hidden;
+    }
+
+    /* ─── PAGE HEADER ─── */
+    .page-header {
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .page-eyebrow {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+
+    .page-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.2rem;
+      font-weight: 300;
+      color: var(--white);
+      line-height: 1.2;
+    }
+
+    .page-title em {
+      font-style: italic;
+      color: var(--gold-light);
+    }
+
+    .page-subtitle {
+      margin-top: 0.5rem;
+      font-size: 0.72rem;
+      color: var(--white-dim);
+      letter-spacing: 0.05em;
+      line-height: 1.6;
+    }
+
+    /* ─── STAT STRIP ─── */
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .stat-cell {
+      background: var(--navy-card);
+      padding: 1.2rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-cell::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .stat-cell:hover::before { opacity: 1; }
+
+    .stat-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--white-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: 0.65rem;
+      color: var(--white-dim);
+      margin-top: 0.3rem;
+    }
+
+    .stat-change {
+      font-size: 0.65rem;
+      margin-top: 0.3rem;
+    }
+
+    .stat-change.up { color: var(--green); }
+    .stat-change.down { color: var(--red); }
+
+    /* ─── GRID ─── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ─── CARDS ─── */
+    .card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 80px; height: 80px;
+      background: radial-gradient(ellipse at bottom right, rgba(201,168,76,0.06), transparent);
+      pointer-events: none;
+    }
+
+    .card-title {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      margin-bottom: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── ASSET TABLE ─── */
+    .asset-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .asset-table th {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--white-dim);
+      text-align: left;
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 400;
+    }
+
+    .asset-table td {
+      padding: 1rem;
+      font-size: 0.72rem;
+      border-bottom: 1px solid rgba(201,168,76,0.06);
+      vertical-align: middle;
+    }
+
+    .asset-table tr:hover td {
+      background: rgba(201,168,76,0.04);
+    }
+
+    .asset-table tr:last-child td { border-bottom: none; }
+
+    .asset-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .asset-location {
+      font-size: 0.65rem;
+      color: var(--white-dim);
+      margin-top: 2px;
+    }
+
+    .asset-type-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+
+    .badge-property { color: var(--teal); border-color: var(--teal-dim); }
+    .badge-sukuk { color: var(--gold); border-color: var(--gold-dim); }
+    .badge-waqf { color: #A78BFA; border-color: #6D4FC2; }
+    .badge-fund { color: #F59E0B; border-color: #B45309; }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.65rem;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .dot-active { background: var(--green); }
+    .dot-pending { background: var(--gold); }
+    .dot-review { background: #F59E0B; }
+
+    .value-cell {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      color: var(--gold);
+    }
+
+    .btn-sm {
+      padding: 5px 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1px solid;
+      background: transparent;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      color: var(--gold);
+      border-color: var(--gold-dim);
+    }
+
+    .btn-primary:hover {
+      background: rgba(201,168,76,0.1);
+    }
+
+    .btn-ghost {
+      color: var(--white-dim);
+      border-color: var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--white);
+      border-color: rgba(201,168,76,0.3);
+    }
+
+    .btn-full {
+      width: 100%;
+      padding: 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1px solid var(--gold-dim);
+      background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
+      color: var(--gold);
+      transition: all 0.2s;
+      margin-top: 1rem;
+    }
+
+    .btn-full:hover {
+      background: linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.1));
+      border-color: var(--gold);
+    }
+
+    /* ─── TOKENIZE FORM ─── */
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .form-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--white-dim);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--gold-dim);
+    }
+
+    .form-input::placeholder { color: var(--white-dim); opacity: 0.5; }
+
+    .form-select option { background: var(--navy-mid); }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    /* ─── COMPLIANCE CHECKLIST ─── */
+    .compliance-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.7rem;
+    }
+
+    .compliance-item:last-child { border-bottom: none; }
+
+    .check-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.65rem;
+    }
+
+    .check-pass { background: rgba(39,174,96,0.2); color: var(--green); }
+    .check-warn { background: rgba(245,158,11,0.2); color: #F59E0B; }
+    .check-fail { background: rgba(192,57,43,0.2); color: var(--red); }
+
+    /* ─── DISTRIBUTION BARS ─── */
+    .dist-item {
+      margin-bottom: 1rem;
+    }
+
+    .dist-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      margin-bottom: 0.4rem;
+      color: var(--white-dim);
+    }
+
+    .dist-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    .dist-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--teal));
+      transition: width 1s ease;
+    }
+
+    /* ─── TRANSACTION LOG ─── */
+    .tx-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.68rem;
+    }
+
+    .tx-item:last-child { border-bottom: none; }
+
+    .tx-icon {
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.8rem;
+    }
+
+    .tx-details { flex: 1; }
+    .tx-hash { color: var(--teal); font-size: 0.65rem; }
+    .tx-desc { color: var(--white); margin-bottom: 2px; }
+    .tx-time { color: var(--white-dim); font-size: 0.62rem; }
+
+    .tx-amount {
+      text-align: right;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+    }
+
+    .tx-amount.credit { color: var(--green); }
+    .tx-amount.debit { color: var(--red); }
+
+    /* ─── ORNAMENTAL DIVIDER ─── */
+    .ornament {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 2rem 0;
+      opacity: 0.4;
+    }
+
+    .ornament-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    .ornament-diamond {
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--gold);
+      transform: rotate(45deg);
+    }
+
+    /* ─── MODAL ─── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,15,30,0.9);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--navy-card);
+      border: 1px solid var(--border-bright);
+      width: 90%;
+      max-width: 560px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 2rem;
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--white-dim);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .modal-close:hover { color: var(--white); }
+
+    /* ─── SUCCESS STATE ─── */
+    .success-state {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .success-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .success-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.8rem;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+
+    .success-hash {
+      font-size: 0.65rem;
+      color: var(--teal);
+      word-break: break-all;
+      margin-top: 1rem;
+      padding: 0.8rem;
+      background: rgba(14,165,160,0.1);
+      border: 1px solid rgba(14,165,160,0.2);
+    }
+
+    /* ─── ARABIC ACCENT ─── */
+    .arabic-accent {
+      font-family: 'Tajawal', sans-serif;
+      font-size: 0.85rem;
+      color: var(--gold-dim);
+      opacity: 0.7;
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── PROGRESS STEPS ─── */
+    .steps {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+    }
+
+    .step {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      color: var(--white-dim);
+      position: relative;
+    }
+
+    .step.active {
+      background: rgba(201,168,76,0.1);
+      border-color: var(--gold-dim);
+      color: var(--gold);
+    }
+
+    .step.done {
+      background: rgba(39,174,96,0.08);
+      border-color: rgba(39,174,96,0.3);
+      color: var(--green);
+    }
+
+    /* ─── WAQF SCORE ─── */
+    .score-ring {
+      width: 80px;
+      height: 80px;
+      position: relative;
+      margin: 0 auto 1rem;
+    }
+
+    .score-ring svg {
+      transform: rotate(-90deg);
+      width: 80px;
+      height: 80px;
+    }
+
+    .score-ring .track {
+      fill: none;
+      stroke: rgba(201,168,76,0.1);
+      stroke-width: 6;
+    }
+
+    .score-ring .fill {
+      fill: none;
+      stroke: var(--gold);
+      stroke-width: 6;
+      stroke-linecap: square;
+      stroke-dasharray: 220;
+      stroke-dashoffset: 44;
+      transition: stroke-dashoffset 1s ease;
+    }
+
+    .score-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem;
+      color: var(--gold);
+    }
+
+    .score-label small {
+      font-size: 0.5rem;
+      font-family: 'DM Mono', monospace;
+      color: var(--white-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* ─── TOOLTIP ─── */
+    [data-tip] {
+      position: relative;
+      cursor: help;
+    }
+
+    [data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--navy-light);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-size: 0.62rem;
+      padding: 6px 10px;
+      white-space: nowrap;
+      letter-spacing: 0.05em;
+      z-index: 50;
+    }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .loading-shimmer {
+      background: linear-gradient(90deg, var(--navy-card) 25%, var(--navy-light) 50%, var(--navy-card) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--navy); }
+    ::-webkit-scrollbar-thumb { background: var(--gold-dim); }
+
+    /* ─── NOTIFICATION ─── */
+    .notification {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--navy-card);
+      border: 1px solid var(--border-bright);
+      border-left: 3px solid var(--gold);
+      padding: 1rem 1.5rem;
+      font-size: 0.72rem;
+      z-index: 300;
+      max-width: 300px;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+    }
+
+    .notification.show { transform: translateX(0); }
+    .notification-title { color: var(--gold); margin-bottom: 0.3rem; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; }
+    .notification-body { color: var(--white-dim); }
+
+    /* ─── HERO SECTION (LANDING) ─── */
+    .hero {
+      min-height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 300;
+      line-height: 1.15;
+      color: var(--white);
+      margin-bottom: 1rem;
+      animation: fadeUp 0.8s 0.1s ease both;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--gold-light);
+    }
+
+    .hero-sub {
+      font-size: 0.85rem;
+      color: var(--white-dim);
+      max-width: 560px;
+      line-height: 1.8;
+      margin-bottom: 3rem;
+      animation: fadeUp 0.8s 0.2s ease both;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      animation: fadeUp 0.8s 0.3s ease both;
+    }
+
+    .btn-hero-primary {
+      padding: 14px 36px;
+      background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1));
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-hero-primary:hover {
+      background: linear-gradient(135deg, rgba(201,168,76,0.3), rgba(201,168,76,0.15));
+      box-shadow: 0 0 40px rgba(201,168,76,0.15);
+    }
+
+    .btn-hero-secondary {
+      padding: 14px 36px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--white-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-hero-secondary:hover {
+      border-color: rgba(201,168,76,0.3);
+      color: var(--white);
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 4rem;
+      margin-top: 4rem;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+
+    .hero-stat-item { text-align: center; }
+
+    .hero-stat-value {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      color: var(--gold);
+    }
+
+    .hero-stat-label {
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--white-dim);
+      margin-top: 0.3rem;
+    }
+
+    /* ─── HIDDEN ─── */
+    .page { display: none; }
+    .page.active { display: block; }
+    #page-landing { display: none; }
+    #page-landing.active { display: flex; flex-direction: column; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <div class="nav-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="16,2 30,9 30,23 16,30 2,23 2,9" stroke="#C9A84C" stroke-width="1" fill="none"/>
+        <polygon points="16,8 24,12 24,20 16,24 8,20 8,12" stroke="#C9A84C" stroke-width="0.5" fill="rgba(201,168,76,0.1)"/>
+        <circle cx="16" cy="16" r="3" fill="#C9A84C"/>
+      </svg>
+    </div>
+    <span class="logo-text">Waqf<span>Chain</span></span>
+  </div>
+
+  <ul class="nav-links">
+    <li><a onclick="showPage('landing')" id="nav-landing">Home</a></li>
+    <li><a onclick="showPage('dashboard')" id="nav-dashboard">Dashboard</a></li>
+    <li><a onclick="showPage('tokenize')" id="nav-tokenize">Tokenize</a></li>
+    <li><a onclick="showPage('distribute')" id="nav-distribute">Distribute</a></li>
+    <li><a onclick="showPage('compliance')" id="nav-compliance">Compliance</a></li>
+  </ul>
+
+  <div class="nav-right">
+    <div class="network-badge">
+      <span class="network-dot"></span>
+      Arc Testnet
+    </div>
+    <button class="btn-connect" id="connectBtn" onclick="toggleConnect()">Connect Wallet</button>
+  </div>
+</nav>
+
+<!-- NOTIFICATION -->
+<div class="notification" id="notification">
+  <div class="notification-title" id="notif-title">Success</div>
+  <div class="notification-body" id="notif-body">Transaction confirmed on Arc testnet.</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <!-- Filled dynamically -->
+  </div>
+</div>
+
+<!-- APP WRAPPER -->
+<div class="app">
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: LANDING
+  ════════════════════════════════════════════════ -->
+  <div id="page-landing" class="page active hero">
+    <div class="hero-eyebrow">Powered by Arc · Circle · USDC</div>
+    <h1 class="hero-title">
+      Endowment Assets,<br/>
+      <em>Reimagined on Chain</em>
+    </h1>
+    <p class="hero-sub">
+      WaqfChain brings centuries-old Islamic endowment (Waqf) infrastructure onchain —
+      tokenizing real-world assets with embedded Sharia compliance, automated USDC
+      distributions, and transparent governance on the Arc blockchain.
+    </p>
+    <div class="hero-cta">
+      <button class="btn-hero-primary" onclick="showPage('dashboard')">Enter Platform</button>
+      <button class="btn-hero-secondary" onclick="showPage('tokenize')">Tokenize an Asset</button>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat-item">
+        <div class="hero-stat-value">$4.2B</div>
+        <div class="hero-stat-label">Assets Registered</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-value">1,847</div>
+        <div class="hero-stat-label">Beneficiaries</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-value">98%</div>
+        <div class="hero-stat-label">Compliance Score</div>
+      </div>
+      <div class="hero-stat-item">
+        <div class="hero-stat-value">$0.002</div>
+        <div class="hero-stat-label">Avg. Settlement Fee</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       SIDEBAR (shown on inner pages)
+  ════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar" style="display:none">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Overview</div>
+      <div class="sidebar-item active" onclick="showPage('dashboard')" id="sb-dashboard">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6"/><rect x="9" y="1" width="6" height="6"/><rect x="1" y="9" width="6" height="6"/><rect x="9" y="9" width="6" height="6"/></svg>
+        Dashboard
+      </div>
+      <div class="sidebar-item" onclick="showPage('tokenize')" id="sb-tokenize">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><line x1="8" y1="4" x2="8" y2="12"/><line x1="4" y1="8" x2="12" y2="8"/></svg>
+        Tokenize Asset
+      </div>
+      <div class="sidebar-item" onclick="showPage('distribute')" id="sb-distribute">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2 L14 8 L8 14 L2 8 Z"/><line x1="8" y1="5" x2="8" y2="11"/><line x1="5" y1="8" x2="11" y2="8"/></svg>
+        Distributions
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Governance</div>
+      <div class="sidebar-item" onclick="showPage('compliance')" id="sb-compliance">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1 L14 4 L14 9 C14 12 11 14.5 8 15 C5 14.5 2 12 2 9 L2 4 Z"/><polyline points="5,8 7,10 11,6"/></svg>
+        Compliance
+      </div>
+      <div class="sidebar-item" onclick="showTxLog()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+        Transaction Log
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Network</div>
+      <div class="sidebar-item">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 2 C6 5 6 11 8 14"/><path d="M2 8 L14 8"/></svg>
+        Arc Explorer ↗
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: DASHBOARD
+  ════════════════════════════════════════════════ -->
+  <main id="page-dashboard" class="page">
+
+    <div class="page-header">
+      <div class="page-eyebrow">Portfolio Overview</div>
+      <h1 class="page-title">Waqf Asset <em>Registry</em></h1>
+      <p class="page-subtitle">All tokenized endowment assets on Arc testnet · USDC-settled distributions · Sharia-compliant</p>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat-cell">
+        <div class="stat-label">Total AUM</div>
+        <div class="stat-value">$4.2B</div>
+        <div class="stat-change up">↑ 12.4% this quarter</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Active Waqf Assets</div>
+        <div class="stat-value">247</div>
+        <div class="stat-sub">Across UAE, KSA, Qatar</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">USDC Distributed</div>
+        <div class="stat-value">$18.7M</div>
+        <div class="stat-change up">↑ via Arc this cycle</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Compliance Score</div>
+        <div class="stat-value">98%</div>
+        <div class="stat-sub">Sharia-aligned portfolio</div>
+      </div>
+    </div>
+
+    <!-- Asset Registry Table -->
+    <div class="card" style="animation-delay:0.15s; margin-bottom:1.5rem">
+      <div class="card-title">Asset Registry</div>
+      <table class="asset-table">
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th>Type</th>
+            <th>Tokens Issued</th>
+            <th>Valuation (USDC)</th>
+            <th>Yield %</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="asset-tbody">
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-2">
+      <!-- Distribution Breakdown -->
+      <div class="card" style="animation-delay:0.2s">
+        <div class="card-title">Beneficiary Distribution</div>
+        <div id="dist-bars"></div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="card" style="animation-delay:0.25s">
+        <div class="card-title">Recent Arc Transactions</div>
+        <div id="tx-list"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: TOKENIZE
+  ════════════════════════════════════════════════ -->
+  <main id="page-tokenize" class="page">
+
+    <div class="page-header">
+      <div class="page-eyebrow">Asset Tokenization</div>
+      <h1 class="page-title">Register a <em>New Waqf Asset</em></h1>
+      <p class="page-subtitle">Issue ERC-20 compatible tokens on Arc representing fractional ownership of a Waqf-registered asset</p>
+    </div>
+
+    <div class="steps" id="tokenize-steps">
+      <div class="step active" id="step-1">1 · Asset Details</div>
+      <div class="step" id="step-2">2 · Valuation</div>
+      <div class="step" id="step-3">3 · Compliance Check</div>
+      <div class="step" id="step-4">4 · Issue Tokens</div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <!-- STEP 1: Asset Details -->
+        <div class="card" id="form-step-1">
+          <div class="card-title">Asset Information</div>
+
+          <div class="form-group">
+            <label class="form-label">Asset Name</label>
+            <input class="form-input" type="text" id="asset-name" placeholder="e.g. Al Maktoum Endowment Tower" oninput="updatePreview()"/>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Asset Type</label>
+              <select class="form-select" id="asset-type" onchange="updatePreview()">
+                <option value="">Select type</option>
+                <option value="property">Real Estate / Property</option>
+                <option value="sukuk">Sukuk (Islamic Bond)</option>
+                <option value="waqf">Waqf Endowment</option>
+                <option value="fund">Investment Fund</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Jurisdiction</label>
+              <select class="form-select" id="asset-jurisdiction">
+                <option value="uae">UAE</option>
+                <option value="ksa">Saudi Arabia</option>
+                <option value="qatar">Qatar</option>
+                <option value="bahrain">Bahrain</option>
+                <option value="kuwait">Kuwait</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Location / Address</label>
+            <input class="form-input" type="text" id="asset-location" placeholder="e.g. Downtown Dubai, UAE" oninput="updatePreview()"/>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Waqf Registration Number</label>
+            <input class="form-input" type="text" id="waqf-reg" placeholder="e.g. AWQAF-2024-00847"/>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Asset Description</label>
+            <textarea class="form-input" rows="3" id="asset-desc" placeholder="Describe the asset, its purpose, and beneficiary allocation..." style="resize:none"></textarea>
+          </div>
+
+          <button class="btn-full" onclick="nextStep(2)">Continue to Valuation →</button>
+        </div>
+
+        <!-- STEP 2: Valuation -->
+        <div class="card" id="form-step-2" style="display:none">
+          <div class="card-title">Valuation & Token Structure</div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Total Asset Value (USDC)</label>
+              <input class="form-input" type="number" id="asset-value" placeholder="e.g. 5000000" oninput="calcTokens()"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Token Price (USDC each)</label>
+              <input class="form-input" type="number" id="token-price" placeholder="e.g. 100" oninput="calcTokens()"/>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tokens to Issue</label>
+            <input class="form-input" type="text" id="token-supply" placeholder="Auto-calculated" readonly style="opacity:0.7"/>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Annual Yield Target (%)</label>
+              <input class="form-input" type="number" id="yield-rate" placeholder="e.g. 6.5"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Distribution Frequency</label>
+              <select class="form-select" id="dist-freq">
+                <option>Monthly</option>
+                <option>Quarterly</option>
+                <option>Annually</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Beneficiary Split</label>
+          </div>
+
+          <div id="beneficiary-splits">
+            <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px">
+              <input class="form-input" placeholder="Beneficiary / Purpose" value="Education endowment"/>
+              <input class="form-input" type="number" placeholder="%" value="40"/>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px">
+              <input class="form-input" placeholder="Beneficiary / Purpose" value="Healthcare fund"/>
+              <input class="form-input" type="number" placeholder="%" value="35"/>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px">
+              <input class="form-input" placeholder="Beneficiary / Purpose" value="Mosque maintenance"/>
+              <input class="form-input" type="number" placeholder="%" value="25"/>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:1rem">
+            <button class="btn-full" onclick="nextStep(1)" style="background:transparent;border-color:var(--border);color:var(--white-dim)">← Back</button>
+            <button class="btn-full" onclick="nextStep(3)">Run Compliance Check →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Compliance -->
+        <div class="card" id="form-step-3" style="display:none">
+          <div class="card-title">Sharia & Regulatory Compliance</div>
+          <p style="font-size:0.72rem;color:var(--white-dim);margin-bottom:1.2rem;line-height:1.6">
+            Running automated compliance checks against UAE AWQAF authority standards, Sharia screening rules, and Arc KYC requirements.
+          </p>
+          <div id="compliance-checks"></div>
+          <div style="display:flex;gap:1rem;margin-top:1.5rem">
+            <button class="btn-full" onclick="nextStep(2)" style="background:transparent;border-color:var(--border);color:var(--white-dim)">← Back</button>
+            <button class="btn-full" onclick="nextStep(4)" id="issue-btn">Issue Tokens on Arc →</button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Issue -->
+        <div class="card" id="form-step-4" style="display:none">
+          <div class="card-title">Token Issuance</div>
+          <div id="issue-result"></div>
+        </div>
+      </div>
+
+      <!-- LIVE PREVIEW PANEL -->
+      <div>
+        <div class="card" style="animation-delay:0.2s;position:sticky;top:80px">
+          <div class="card-title">Live Preview</div>
+
+          <div style="background:rgba(201,168,76,0.05);border:1px solid var(--border);padding:1.2rem;margin-bottom:1.2rem">
+            <div style="font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--white-dim);margin-bottom:0.5rem">Token Symbol</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:2rem;color:var(--gold)" id="preview-symbol">WQFC</div>
+            <div style="font-size:0.7rem;color:var(--white-dim);margin-top:4px" id="preview-name">Asset name will appear here</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-bottom:1.2rem">
+            <div style="background:var(--navy-card);padding:0.8rem">
+              <div style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--white-dim)">Blockchain</div>
+              <div style="font-size:0.8rem;color:var(--teal);margin-top:4px">Arc Testnet</div>
+            </div>
+            <div style="background:var(--navy-card);padding:0.8rem">
+              <div style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--white-dim)">Standard</div>
+              <div style="font-size:0.8rem;color:var(--white);margin-top:4px">ERC-20</div>
+            </div>
+            <div style="background:var(--navy-card);padding:0.8rem">
+              <div style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--white-dim)">Settlement</div>
+              <div style="font-size:0.8rem;color:var(--white);margin-top:4px">USDC on Arc</div>
+            </div>
+            <div style="background:var(--navy-card);padding:0.8rem">
+              <div style="font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--white-dim)">Compliance</div>
+              <div style="font-size:0.8rem;color:var(--green);margin-top:4px">Sharia ✓</div>
+            </div>
+          </div>
+
+          <div class="score-ring">
+            <svg viewBox="0 0 80 80">
+              <circle class="track" cx="40" cy="40" r="35"/>
+              <circle class="fill" cx="40" cy="40" r="35" id="score-circle"/>
+            </svg>
+            <div class="score-label">
+              98<small>Score</small>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:0.62rem;color:var(--white-dim);margin-top:0.5rem">Waqf Compliance Score</div>
+
+          <div class="ornament"><div class="ornament-line"></div><div class="ornament-diamond"></div><div class="ornament-line"></div></div>
+
+          <div style="font-size:0.62rem;color:var(--white-dim);text-align:center;line-height:1.8">
+            <span class="arabic-accent">وقف</span><br/>
+            Endowment for the benefit of humanity
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: DISTRIBUTE
+  ════════════════════════════════════════════════ -->
+  <main id="page-distribute" class="page">
+
+    <div class="page-header">
+      <div class="page-eyebrow">USDC Distributions · Arc Testnet</div>
+      <h1 class="page-title">Beneficiary <em>Payouts</em></h1>
+      <p class="page-subtitle">Automated USDC distribution to registered beneficiaries · Sub-second finality on Arc</p>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat-cell">
+        <div class="stat-label">Pending Distribution</div>
+        <div class="stat-value">$842K</div>
+        <div class="stat-sub">Ready to distribute</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Beneficiaries</div>
+        <div class="stat-value">1,847</div>
+        <div class="stat-sub">Verified wallets</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Last Distribution</div>
+        <div class="stat-value">$1.2M</div>
+        <div class="stat-sub">May 1, 2026</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Avg. Fee per Tx</div>
+        <div class="stat-value">$0.002</div>
+        <div class="stat-sub">USDC · Arc testnet</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Trigger Distribution</div>
+        <div class="form-group">
+          <label class="form-label">Select Asset Pool</label>
+          <select class="form-select" id="dist-asset">
+            <option>Al Maktoum Endowment Tower (WQFT)</option>
+            <option>Dubai Healthcare Waqf Fund (DHWF)</option>
+            <option>GCC Education Sukuk (GCES)</option>
+            <option>Abu Dhabi Real Estate Waqf (ADREW)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Distribution Period</label>
+          <select class="form-select">
+            <option>May 2026 (Current)</option>
+            <option>April 2026</option>
+            <option>March 2026</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Amount (USDC)</label>
+          <input class="form-input" type="number" id="dist-amount" value="842000" placeholder="Amount in USDC"/>
+        </div>
+
+        <div style="background:rgba(201,168,76,0.06);border:1px solid var(--border);padding:1rem;margin-bottom:1rem">
+          <div style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--white-dim);margin-bottom:0.8rem">Distribution Breakdown</div>
+          <div style="font-size:0.72rem;display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:var(--white-dim)">Education Endowment (40%)</span>
+            <span style="color:var(--gold)">$336,800 USDC</span>
+          </div>
+          <div style="font-size:0.72rem;display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:var(--white-dim)">Healthcare Fund (35%)</span>
+            <span style="color:var(--gold)">$294,700 USDC</span>
+          </div>
+          <div style="font-size:0.72rem;display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:var(--white-dim)">Mosque Maintenance (25%)</span>
+            <span style="color:var(--gold)">$210,500 USDC</span>
+          </div>
+          <div style="height:1px;background:var(--border);margin:8px 0"></div>
+          <div style="font-size:0.72rem;display:flex;justify-content:space-between">
+            <span style="color:var(--white-dim)">Arc Network Fees (est.)</span>
+            <span style="color:var(--teal)">~$3.69 USDC</span>
+          </div>
+        </div>
+
+        <button class="btn-full" onclick="triggerDistribution()">Execute Distribution via Arc →</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Distribution History</div>
+        <div id="dist-history"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE: COMPLIANCE
+  ════════════════════════════════════════════════ -->
+  <main id="page-compliance" class="page">
+
+    <div class="page-header">
+      <div class="page-eyebrow">Regulatory & Sharia Compliance</div>
+      <h1 class="page-title">Compliance <em>Dashboard</em></h1>
+      <p class="page-subtitle">Real-time compliance monitoring · UAE AWQAF authority standards · Sharia screening · KYC/AML</p>
+    </div>
+
+    <div class="stat-strip">
+      <div class="stat-cell">
+        <div class="stat-label">Portfolio Score</div>
+        <div class="stat-value">98%</div>
+        <div class="stat-change up">↑ 2% from last audit</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">KYC Verified</div>
+        <div class="stat-value">1,831</div>
+        <div class="stat-sub">of 1,847 beneficiaries</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Sharia Screens</div>
+        <div class="stat-value">247/247</div>
+        <div class="stat-change up">All assets compliant</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Last Audit</div>
+        <div class="stat-value">May 10</div>
+        <div class="stat-sub">Next: June 10, 2026</div>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card" style="animation-delay:0.1s">
+        <div class="card-title">Sharia Screening</div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">No interest-bearing instruments</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Riba prohibition observed</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Halal business activities only</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Sector screening passed</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Profit-sharing structure</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Musharakah-compliant</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Charitable allocation verified</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Min. 2.5% Zakat reserved</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-warn">!</div>
+          <div>
+            <div style="font-size:0.72rem">Speculation limit</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">3 assets under review</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="animation-delay:0.15s">
+        <div class="card-title">KYC / AML Status</div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Identity verification</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">1,831 / 1,847 verified</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Sanctions screening</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">OFAC / UN lists clear</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">AML transaction monitoring</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">No suspicious patterns</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-warn">!</div>
+          <div>
+            <div style="font-size:0.72rem">Pending verifications</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">16 beneficiaries pending</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Circle KYC integration</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Linked to Circle Wallets</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="animation-delay:0.2s">
+        <div class="card-title">Regulatory (UAE)</div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">AWQAF Authority registered</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">All assets registered</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">DIFC / ADGM reporting</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Q1 2026 submitted</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Onchain audit trail</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Full Arc ledger history</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">FATF travel rule</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">All txns > $1K flagged</div>
+          </div>
+        </div>
+        <div class="compliance-item">
+          <div class="check-icon check-pass">✓</div>
+          <div>
+            <div style="font-size:0.72rem">Investor accreditation</div>
+            <div style="font-size:0.62rem;color:var(--white-dim)">Onchain logic enforced</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Run Compliance Scan</div>
+      <p style="font-size:0.72rem;color:var(--white-dim);margin-bottom:1.2rem;line-height:1.6">
+        Manually trigger a full compliance scan across all registered assets against the latest UAE AWQAF rules and Sharia screening criteria.
+      </p>
+      <button class="btn-full" style="max-width:300px" onclick="runComplianceScan()">Run Full Portfolio Scan →</button>
+    </div>
+
+  </main>
+
+</div><!-- end .app -->
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let currentPage = 'landing';
+let walletConnected = false;
+let tokenizeStep = 1;
+
+const assets = [
+  { name: 'Al Maktoum Endowment Tower', location: 'Downtown Dubai, UAE', type: 'waqf', tokens: '50,000 WQFT', value: '5,000,000', yield: '6.8%', status: 'active' },
+  { name: 'Dubai Healthcare Waqf Fund', location: 'Dubai Healthcare City', type: 'fund', tokens: '20,000 DHWF', value: '2,000,000', yield: '5.2%', status: 'active' },
+  { name: 'GCC Education Sukuk', location: 'Multiple — GCC', type: 'sukuk', tokens: '100,000 GCES', value: '10,000,000', yield: '7.1%', status: 'active' },
+  { name: 'Abu Dhabi REIT Waqf', location: 'Abu Dhabi, UAE', type: 'property', tokens: '30,000 ADREW', value: '3,000,000', yield: '6.0%', status: 'pending' },
+  { name: 'Mecca Commercial Waqf', location: 'Mecca, Saudi Arabia', type: 'waqf', tokens: '15,000 MCWQ', value: '1,500,000', yield: '5.9%', status: 'review' },
+];
+
+const txns = [
+  { icon: '↑', desc: 'Distribution — Education Fund', hash: '0x4a2f...8c91', time: '2 hours ago', amount: '+$336,800', type: 'credit' },
+  { icon: '⊕', desc: 'Token Issuance — ADREW', hash: '0x7b1e...3d44', time: '1 day ago', amount: '30,000 tokens', type: 'credit' },
+  { icon: '↑', desc: 'Distribution — Healthcare', hash: '0x9c3a...1f72', time: '3 days ago', amount: '+$294,700', type: 'credit' },
+  { icon: '✓', desc: 'Compliance Audit Recorded', hash: '0x2e8b...6a19', time: '1 week ago', amount: '$0.002 fee', type: 'debit' },
+];
+
+const distHistory = [
+  { date: 'May 1, 2026', asset: 'Al Maktoum Tower', amount: '$842,000', beneficiaries: 1847, status: 'Settled' },
+  { date: 'April 1, 2026', asset: 'GCC Education Sukuk', amount: '$710,000', beneficiaries: 1831, status: 'Settled' },
+  { date: 'March 1, 2026', asset: 'Healthcare Waqf Fund', amount: '$520,000', beneficiaries: 1802, status: 'Settled' },
+  { date: 'February 1, 2026', asset: 'Portfolio-wide', amount: '$1,200,000', beneficiaries: 1790, status: 'Settled' },
+];
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+
+  const nav = document.getElementById('nav-' + page);
+  if (nav) nav.classList.add('active');
+
+  const sb = document.getElementById('sb-' + page);
+  if (sb) sb.classList.add('active');
+
+  const sidebar = document.getElementById('sidebar');
+  sidebar.style.display = page === 'landing' ? 'none' : 'block';
+
+  currentPage = page;
+
+  if (page === 'dashboard') renderDashboard();
+}
+
+// ═══════════════════════════════════════════
+// WALLET
+// ═══════════════════════════════════════════
+function toggleConnect() {
+  walletConnected = !walletConnected;
+  const btn = document.getElementById('connectBtn');
+  if (walletConnected) {
+    btn.textContent = '0x7A3b...F921';
+    btn.classList.add('connected');
+    notify('Wallet Connected', 'Arc testnet · 0x7A3b...F921');
+  } else {
+    btn.textContent = 'Connect Wallet';
+    btn.classList.remove('connected');
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDER DASHBOARD
+// ═══════════════════════════════════════════
+function renderDashboard() {
+  // Asset table
+  const tbody = document.getElementById('asset-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = assets.map(a => `
+    <tr>
+      <td>
+        <div class="asset-name">${a.name}</div>
+        <div class="asset-location">${a.location}</div>
+      </td>
+      <td><span class="asset-type-badge badge-${a.type}">${a.type}</span></td>
+      <td style="color:var(--white-dim)">${a.tokens}</td>
+      <td class="value-cell">$${a.value}</td>
+      <td style="color:var(--green)">${a.yield}</td>
+      <td>
+        <span class="status-dot">
+          <span class="dot dot-${a.status}"></span>
+          ${a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+        </span>
+      </td>
+      <td>
+        <button class="btn-sm btn-primary" onclick="showAssetModal('${a.name}')">View</button>
+      </td>
+    </tr>
+  `).join('');
+
+  // Distribution bars
+  const bars = [
+    { label: 'Education Endowment', pct: 40 },
+    { label: 'Healthcare Fund', pct: 35 },
+    { label: 'Mosque Maintenance', pct: 25 },
+  ];
+  document.getElementById('dist-bars').innerHTML = bars.map(b => `
+    <div class="dist-item">
+      <div class="dist-header">
+        <span>${b.label}</span>
+        <span style="color:var(--gold)">${b.pct}%</span>
+      </div>
+      <div class="dist-bar"><div class="dist-fill" style="width:${b.pct}%"></div></div>
+    </div>
+  `).join('');
+
+  // Transactions
+  document.getElementById('tx-list').innerHTML = txns.map(t => `
+    <div class="tx-item">
+      <div class="tx-icon">${t.icon}</div>
+      <div class="tx-details">
+        <div class="tx-desc">${t.desc}</div>
+        <div class="tx-hash">${t.hash}</div>
+        <div class="tx-time">${t.time}</div>
+      </div>
+      <div class="tx-amount ${t.type}">${t.amount}</div>
+    </div>
+  `).join('');
+
+  // Distribution history
+  const dh = document.getElementById('dist-history');
+  if (dh) {
+    dh.innerHTML = distHistory.map(d => `
+      <div class="tx-item">
+        <div class="tx-icon">↑</div>
+        <div class="tx-details">
+          <div class="tx-desc">${d.asset}</div>
+          <div class="tx-hash">${d.beneficiaries.toLocaleString()} beneficiaries</div>
+          <div class="tx-time">${d.date}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--gold)">${d.amount}</div>
+          <div style="font-size:0.62rem;color:var(--green)">${d.status}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// ═══════════════════════════════════════════
+// TOKENIZE STEPS
+// ═══════════════════════════════════════════
+function nextStep(step) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('form-step-' + i);
+    const stepEl = document.getElementById('step-' + i);
+    if (el) el.style.display = 'none';
+    if (stepEl) {
+      stepEl.className = 'step';
+      if (i < step) stepEl.classList.add('done');
+      if (i === step) stepEl.classList.add('active');
+    }
+  }
+
+  const target = document.getElementById('form-step-' + step);
+  if (target) target.style.display = 'block';
+
+  if (step === 3) renderComplianceChecks();
+  if (step === 4) issueTokens();
+
+  tokenizeStep = step;
+}
+
+function renderComplianceChecks() {
+  const checks = [
+    { label: 'Waqf Registration Number — verified', status: 'pass' },
+    { label: 'Asset type permitted under UAE AWQAF law', status: 'pass' },
+    { label: 'No interest-bearing components (Riba check)', status: 'pass' },
+    { label: 'Beneficiary allocations defined', status: 'pass' },
+    { label: 'KYC data linked to Circle Wallets', status: 'pass' },
+    { label: 'Minimum charitable allocation ≥ 2.5%', status: 'pass' },
+    { label: 'Speculative asset limit < 30%', status: 'warn' },
+  ];
+
+  const el = document.getElementById('compliance-checks');
+  let i = 0;
+  el.innerHTML = '';
+  const interval = setInterval(() => {
+    if (i >= checks.length) { clearInterval(interval); return; }
+    const c = checks[i];
+    const div = document.createElement('div');
+    div.className = 'compliance-item';
+    div.innerHTML = `
+      <div class="check-icon check-${c.status}">${c.status === 'pass' ? '✓' : '!'}</div>
+      <div style="font-size:0.72rem">${c.label}</div>
+    `;
+    el.appendChild(div);
+    i++;
+  }, 250);
+}
+
+function issueTokens() {
+  const el = document.getElementById('issue-result');
+  el.innerHTML = `
+    <div style="text-align:center;padding:1rem">
+      <div style="font-size:2rem;margin-bottom:1rem">⏳</div>
+      <div style="font-size:0.72rem;color:var(--white-dim)">Broadcasting to Arc testnet...</div>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const fakeTx = '0x' + Math.random().toString(16).substr(2, 40).toUpperCase();
+    el.innerHTML = `
+      <div class="success-state">
+        <div class="success-icon">✦</div>
+        <div class="success-title">Tokens Issued</div>
+        <div style="font-size:0.72rem;color:var(--white-dim)">Your Waqf asset has been tokenized and recorded on Arc testnet</div>
+        <div class="success-hash">${fakeTx}</div>
+        <div style="margin-top:1.5rem;font-size:0.68rem;color:var(--white-dim)">View on Arc Explorer ↗</div>
+        <button class="btn-full" onclick="showPage('dashboard')" style="margin-top:1.5rem">Go to Dashboard →</button>
+      </div>
+    `;
+    notify('Tokens Issued', 'Asset successfully tokenized on Arc testnet.');
+  }, 2500);
+}
+
+function calcTokens() {
+  const val = parseFloat(document.getElementById('asset-value').value) || 0;
+  const price = parseFloat(document.getElementById('token-price').value) || 0;
+  const supply = price > 0 ? Math.floor(val / price).toLocaleString() : '';
+  document.getElementById('token-supply').value = supply ? supply + ' tokens' : '';
+}
+
+function updatePreview() {
+  const name = document.getElementById('asset-name').value;
+  const type = document.getElementById('asset-type').value;
+  const location = document.getElementById('asset-location').value;
+
+  document.getElementById('preview-name').textContent = name || 'Asset name will appear here';
+  if (location) document.getElementById('preview-name').textContent += ' · ' + location;
+
+  const symbols = { property: 'PROP', sukuk: 'SUKK', waqf: 'WQFC', fund: 'FUND' };
+  document.getElementById('preview-symbol').textContent = symbols[type] || 'WQFC';
+}
+
+// ═══════════════════════════════════════════
+// DISTRIBUTION
+// ═══════════════════════════════════════════
+function triggerDistribution() {
+  if (!walletConnected) {
+    notify('Wallet Required', 'Please connect your wallet first.');
+    return;
+  }
+  notify('Broadcasting...', 'Submitting distribution to Arc testnet.');
+  setTimeout(() => {
+    notify('Distribution Complete', '$842,000 USDC settled across 1,847 beneficiaries.');
+  }, 3000);
+}
+
+// ═══════════════════════════════════════════
+// COMPLIANCE SCAN
+// ═══════════════════════════════════════════
+function runComplianceScan() {
+  notify('Scanning Portfolio', 'Running Sharia & regulatory checks...');
+  setTimeout(() => notify('Scan Complete', 'Portfolio score: 98% · 3 assets flagged for review.'), 3000);
+}
+
+// ═══════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════
+function showAssetModal(name) {
+  const asset = assets.find(a => a.name === name);
+  if (!asset) return;
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-header">
+      <div>
+        <div class="page-eyebrow" style="margin-bottom:0.3rem">${asset.type.toUpperCase()} · ${asset.location}</div>
+        <div class="modal-title">${asset.name}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-bottom:1.5rem">
+      ${[
+        ['Tokens Issued', asset.tokens],
+        ['Valuation', '$' + asset.value + ' USDC'],
+        ['Annual Yield', asset.yield],
+        ['Status', asset.status.charAt(0).toUpperCase() + asset.status.slice(1)],
+      ].map(([l, v]) => `
+        <div style="background:var(--navy-card);padding:1rem">
+          <div style="font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--white-dim)">${l}</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--gold);margin-top:4px">${v}</div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="font-size:0.7rem;color:var(--white-dim);line-height:1.8;margin-bottom:1.5rem">
+      This Waqf asset is registered with the UAE AWQAF Authority and tokenized on Arc testnet.
+      Token holders receive proportional USDC distributions based on net rental/yield income,
+      automatically settled on Arc with sub-second finality and predictable fees.
+    </div>
+    <div style="display:flex;gap:1rem">
+      <button class="btn-full" onclick="closeModal()" style="background:transparent;border-color:var(--border);color:var(--white-dim)">Close</button>
+      <button class="btn-full" onclick="closeModal();showPage('distribute')">Distribute Yield →</button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+function showTxLog() {
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">Transaction Log</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="font-size:0.62rem;color:var(--teal);margin-bottom:1.2rem">Arc Testnet · All times UTC</div>
+    ${txns.concat(txns).map(t => `
+      <div class="tx-item">
+        <div class="tx-icon">${t.icon}</div>
+        <div class="tx-details">
+          <div class="tx-desc">${t.desc}</div>
+          <div class="tx-hash">${t.hash}</div>
+          <div class="tx-time">${t.time}</div>
+        </div>
+        <div class="tx-amount ${t.type}">${t.amount}</div>
+      </div>
+    `).join('')}
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════
+function notify(title, body) {
+  const n = document.getElementById('notification');
+  document.getElementById('notif-title').textContent = title;
+  document.getElementById('notif-body').textContent = body;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 4000);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+renderDashboard();
+</script>
+</body>
+</html>
